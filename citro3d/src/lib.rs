@@ -1,3 +1,4 @@
+#![feature(new_uninit)]
 #![feature(custom_test_frameworks)]
 #![test_runner(test_runner::run_gdb)]
 #![feature(doc_cfg)]
@@ -16,6 +17,7 @@ pub mod math;
 pub mod render;
 pub mod shader;
 pub mod texenv;
+pub mod texture;
 pub mod uniform;
 
 use std::cell::OnceCell;
