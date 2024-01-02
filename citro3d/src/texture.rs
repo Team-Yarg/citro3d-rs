@@ -1,5 +1,36 @@
 use std::ptr::NonNull;
 
+use citro3d_sys::C3D_TexCube;
+
+#[doc(alias = "GPU_TEXTURE_MODE_PARAM")]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[repr(u32)]
+pub enum TexKind {
+    /// Standard 2D texture
+    Tex2d = ctru_sys::GPU_TEX_2D,
+    /// Cube map texture
+    CubeMap = ctru_sys::GPU_TEX_CUBE_MAP,
+    Shadow2d = ctru_sys::GPU_TEX_SHADOW_2D,
+    ShadowCube = ctru_sys::GPU_TEX_SHADOW_CUBE,
+}
+
+impl From<ctru_sys::GPU_TEXTURE_MODE_PARAM> for TexKind {
+    /// Convert from a `ctru_sys` texture type
+    ///
+    /// # Panics
+    ///
+    /// If `value` isn't a valid texture type
+    fn from(value: ctru_sys::GPU_TEXTURE_MODE_PARAM) -> Self {
+        match value {
+            ctru_sys::GPU_TEX_2D => Self::Tex2d,
+            ctru_sys::GPU_TEX_CUBE_MAP => Self::CubeMap,
+            ctru_sys::GPU_TEX_SHADOW_2D => Self::Shadow2d,
+            ctru_sys::GPU_TEX_SHADOW_CUBE => Self::ShadowCube,
+            _ => panic!("invalid texture type code: {value}"),
+        }
+    }
+}
+
 /// Format of the texture bytes
 #[doc(alias = "GPU_TEXCOLOR")]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -100,14 +131,90 @@ pub enum TextureWrapParam {
     MirroredRepeat = ctru_sys::GPU_MIRRORED_REPEAT,
 }
 
+pub struct TexParams {
+    use_vram: bool,
+    width: u16,
+    height: u16,
+    format: TexFormat,
+    kind: TexKind,
+    cube: Option<C3D_TexCube>,
+}
+
+impl TexParams {
+    /// Parameters for 2d texture in rgba8 format using CPU memory
+    pub fn new_2d(width: u16, height: u16) -> Self {
+        Self {
+            use_vram: false,
+            width,
+            height,
+            format: TexFormat::Rgba8,
+            kind: TexKind::Tex2d,
+            cube: None,
+        }
+    }
+
+    /// Set whether to use vram for storing pixels
+    pub fn use_vram(mut self, v: bool) -> Self {
+        self.use_vram = v;
+        self
+    }
+
+    pub fn width(mut self, v: u16) -> Self {
+        self.width = v;
+        self
+    }
+
+    pub fn height(mut self, v: u16) -> Self {
+        self.height = v;
+        self
+    }
+    /// Set to 2d
+    pub fn make_2d(mut self) -> Self {
+        self.cube.take();
+        self.kind = TexKind::Tex2d;
+        self
+    }
+    /// Set texture format
+    pub fn format(mut self, fmt: TexFormat) -> Self {
+        self.format = fmt;
+        self
+    }
+}
+
 pub struct Tex(NonNull<citro3d_sys::C3D_Tex>);
 
 impl Tex {
-    #[doc(alias = "C3D_TexInit")]
-    pub fn new(width: u16, height: u16, format: TexFormat) -> super::Result<Self> {
+    /// Create a new texture with parameters
+    ///
+    /// ```
+    /// # let _runner = test_runner::GdbRunner::default();
+    /// # use citro3d::texture::{Tex, TexParams};
+    /// let tex = Tex::new(TexParams::new_2d(480, 320).use_vram(true));
+    /// ```
+    #[doc(alias = "C3D_TexInitWithParams")]
+    pub fn new(params: TexParams) -> super::Result<Self> {
         let raw = unsafe {
             let mut raw = Box::<citro3d_sys::C3D_Tex>::new_uninit();
-            if !citro3d_sys::C3D_TexInit(raw.as_mut_ptr(), width, height, format as _) {
+            assert!(
+                params.kind != TexKind::CubeMap || params.cube.is_some(),
+                "want cube map but have no textures set for it"
+            );
+            let cube = params
+                .cube
+                .map(|c| Box::into_raw(Box::new(c)))
+                .unwrap_or(core::ptr::null_mut());
+            let mut cparams = citro3d_sys::C3D_TexInitParams {
+                width: params.width,
+                height: params.height,
+                _bitfield_align_1: Default::default(),
+                _bitfield_1: Default::default(),
+                __bindgen_padding_0: Default::default(),
+            };
+            cparams.set_onVram(params.use_vram);
+            cparams.set_format(params.format as _);
+            cparams.set_type(params.kind as _);
+            cparams.set_maxLevel(0);
+            if !citro3d_sys::C3D_TexInitWithParams(raw.as_mut_ptr(), cube, cparams) {
                 return Err(super::Error::FailedToInitialize);
             }
             raw.assume_init()
@@ -115,6 +222,11 @@ impl Tex {
         let raw = NonNull::new(Box::into_raw(raw)).ok_or(super::Error::FailedToInitialize)?;
         Ok(Self(raw))
     }
+
+    pub fn kind(&self) -> TexKind {
+        unsafe { citro3d_sys::C3D_TexGetType(self.0.as_ptr()) }.into()
+    }
+
     pub fn width(&self) -> u16 {
         unsafe { self.0.as_ref().__bindgen_anon_2.__bindgen_anon_1.width }
     }
@@ -122,12 +234,13 @@ impl Tex {
         unsafe { self.0.as_ref().__bindgen_anon_2.__bindgen_anon_1.height }
     }
 
+    pub fn format(&self) -> TexFormat {
+        TexFormat::try_from(unsafe { self.0.as_ref().fmt() }).expect("unknown texture colour type")
+    }
+
     #[doc(alias = "C3D_TexBind")]
     pub fn bind(&self, unit_id: i32) {
         unsafe { citro3d_sys::C3D_TexBind(unit_id, self.as_raw().cast_mut()) }
-    }
-    pub fn format(&self) -> TexFormat {
-        TexFormat::try_from(unsafe { self.0.as_ref().fmt() }).expect("unknown texture colour type")
     }
 
     #[doc(alias = "C3D_TexUpload")]
