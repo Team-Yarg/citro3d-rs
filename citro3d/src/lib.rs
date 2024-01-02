@@ -20,8 +20,8 @@ pub mod texenv;
 pub mod texture;
 pub mod uniform;
 
-use std::cell::OnceCell;
 use std::fmt;
+use std::sync::OnceLock;
 
 pub use error::{Error, Result};
 
@@ -38,7 +38,7 @@ pub mod macros {
 #[non_exhaustive]
 #[must_use]
 pub struct Instance {
-    texenvs: [OnceCell<TexEnv>; texenv::TEXENV_COUNT],
+    texenvs: [OnceLock<TexEnv>; texenv::TEXENV_COUNT],
 }
 
 impl fmt::Debug for Instance {
@@ -66,15 +66,7 @@ impl Instance {
     pub fn with_cmdbuf_size(size: usize) -> Result<Self> {
         if unsafe { citro3d_sys::C3D_Init(size) } {
             Ok(Self {
-                texenvs: [
-                    // thank goodness there's only six of them!
-                    OnceCell::new(),
-                    OnceCell::new(),
-                    OnceCell::new(),
-                    OnceCell::new(),
-                    OnceCell::new(),
-                    OnceCell::new(),
-                ],
+                texenvs: std::array::from_fn(|_| OnceLock::new()),
             })
         } else {
             Err(Error::FailedToInitialize)
