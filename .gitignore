@@ -20,3 +20,4 @@ rust-toolchain.toml
 
 # Pica200 output files
 *.shbin
+.vscode/settings.json
