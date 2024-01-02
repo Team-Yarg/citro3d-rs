@@ -127,7 +127,7 @@ impl Info {
         Ok(Index(idx))
     }
 
-    pub(crate) fn permutation(&self) -> u64 {
+    pub fn permutation(&self) -> u64 {
         self.0.permutation
     }
 
