@@ -137,6 +137,7 @@ impl From<Type> for u32 {
 /// This is the result of parsing a shader binary (`.shbin`), and the resulting
 /// [`Entrypoint`]s can be used as part of a [`Program`].
 #[doc(alias = "DVLB_s")]
+#[derive(Debug)]
 pub struct Library(NonNull<ctru_sys::DVLB_s>);
 
 // Safety: we are the owner of the DVLB

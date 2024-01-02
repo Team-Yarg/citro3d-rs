@@ -8,6 +8,7 @@ use bitflags::bitflags;
 /// A texture combiner, also called a "texture environment" (hence the struct name).
 /// See also [`texenv.h` documentation](https://oreo639.github.io/citro3d/texenv_8h.html).
 #[doc(alias = "C3D_TexEnv")]
+#[derive(Debug)]
 pub struct TexEnv(NonNull<citro3d_sys::C3D_TexEnv>);
 
 /// We don't own the pointer but we are the only access safe code will have to it
