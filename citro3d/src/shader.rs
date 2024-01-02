@@ -7,6 +7,7 @@
 use std::error::Error;
 use std::ffi::CString;
 use std::mem::MaybeUninit;
+use std::ptr::NonNull;
 
 use crate::uniform;
 
@@ -136,7 +137,11 @@ impl From<Type> for u32 {
 /// This is the result of parsing a shader binary (`.shbin`), and the resulting
 /// [`Entrypoint`]s can be used as part of a [`Program`].
 #[doc(alias = "DVLB_s")]
-pub struct Library(*mut ctru_sys::DVLB_s);
+pub struct Library(NonNull<ctru_sys::DVLB_s>);
+
+// Safety: we are the owner of the DVLB
+unsafe impl Send for Library {}
+unsafe impl Sync for Library {}
 
 impl Library {
     /// Parse a new shader library from input bytes.
@@ -148,7 +153,7 @@ impl Library {
     #[doc(alias = "DVLB_ParseFile")]
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, Box<dyn Error>> {
         let aligned: &[u32] = bytemuck::try_cast_slice(bytes)?;
-        Ok(Self(unsafe {
+        let lib = unsafe {
             ctru_sys::DVLB_ParseFile(
                 // SAFETY: we're trusting the parse implementation doesn't mutate
                 // the contents of the data. From a quick read it looks like that's
@@ -156,14 +161,16 @@ impl Library {
                 aligned.as_ptr().cast_mut(),
                 aligned.len().try_into()?,
             )
-        }))
+        };
+        let lib = NonNull::new(lib).ok_or(Box::new(super::Error::FailedToInitialize))?;
+        Ok(Self(lib))
     }
 
     /// Get the number of [`Entrypoint`]s in this shader library.
     #[must_use]
     #[doc(alias = "numDVLE")]
     pub fn len(&self) -> usize {
-        unsafe { (*self.0).numDVLE as usize }
+        unsafe { self.0.as_ref().numDVLE as usize }
     }
 
     /// Whether the library has any [`Entrypoint`]s or not.
@@ -177,7 +184,7 @@ impl Library {
     pub fn get(&self, index: usize) -> Option<Entrypoint> {
         if index < self.len() {
             Some(Entrypoint {
-                ptr: unsafe { (*self.0).DVLE.add(index) },
+                ptr: unsafe { self.0.as_ref().DVLE.add(index) },
                 _library: self,
             })
         } else {
@@ -186,7 +193,7 @@ impl Library {
     }
 
     fn as_raw(&mut self) -> *mut ctru_sys::DVLB_s {
-        self.0
+        self.0.as_ptr()
     }
 }
 
