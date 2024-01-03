@@ -131,6 +131,7 @@ pub enum TextureWrapParam {
     MirroredRepeat = ctru_sys::GPU_MIRRORED_REPEAT,
 }
 
+#[doc(alias = "C3D_TexInitParams")]
 pub struct TexParams {
     use_vram: bool,
     width: u16,
@@ -181,6 +182,8 @@ impl TexParams {
     }
 }
 
+#[doc(alias = "C3D_Tex")]
+#[derive(Debug)]
 pub struct Tex(NonNull<citro3d_sys::C3D_Tex>);
 
 impl Tex {
