@@ -94,9 +94,10 @@ fn include_shader_impl(input: TokenStream) -> Result<TokenStream, Box<dyn Error>
     };
 
     // By joining these three pieces, we arrive at approximately the same behavior as `include_bytes!`
-    let shader_source_file = cwd
-        .join(invoking_source_dir)
-        .join(string_lit.value())
+    let shader_source_file = cwd.join(invoking_source_dir).join(string_lit.value());
+
+    #[cfg(not(win))]
+    let shader_source_file = shader_source_file
         // This might be overkill, but it ensures we get a unique path if different
         // shaders with the same relative path are used within one program
         .canonicalize()
