@@ -6,8 +6,11 @@
 
 use std::error::Error;
 use std::ffi::CString;
+use std::marker::PhantomPinned;
 use std::mem::MaybeUninit;
+use std::pin::Pin;
 use std::ptr::NonNull;
+use std::sync::Arc;
 
 use crate::uniform;
 
@@ -19,6 +22,7 @@ use crate::uniform;
 /// The PICA200 does not support user-programmable fragment shaders.
 #[doc(alias = "shaderProgram_s")]
 #[must_use]
+#[derive(Clone)]
 pub struct Program {
     program: ctru_sys::shaderProgram_s,
 }
@@ -83,7 +87,7 @@ impl Program {
     /// * If a uniform with the given `name` could not be found
     #[doc(alias = "shaderInstanceGetUniformLocation")]
     pub fn get_uniform(&self, name: &str) -> crate::Result<uniform::Index> {
-        let vertex_instance = unsafe { (*self.as_raw()).vertexShader };
+        let vertex_instance = self.program.vertexShader;
         assert!(
             !vertex_instance.is_null(),
             "vertex shader should never be null!"
@@ -101,7 +105,7 @@ impl Program {
         }
     }
 
-    pub(crate) fn as_raw(&self) -> *const ctru_sys::shaderProgram_s {
+    pub(crate) fn as_raw(self: &Pin<Arc<Self>>) -> *const ctru_sys::shaderProgram_s {
         &self.program
     }
 }
@@ -110,7 +114,7 @@ impl Drop for Program {
     #[doc(alias = "shaderProgramFree")]
     fn drop(&mut self) {
         unsafe {
-            let _ = ctru_sys::shaderProgramFree(self.as_raw().cast_mut());
+            let _ = ctru_sys::shaderProgramFree(&mut self.program);
         }
     }
 }
@@ -233,4 +237,8 @@ impl<'lib> Entrypoint<'lib> {
     fn as_raw(self) -> *mut ctru_sys::DVLE_s {
         self.ptr
     }
+}
+fn thingy() {
+    fn t<T: Unpin>() {}
+    t::<ctru_sys::shaderProgram_s>();
 }

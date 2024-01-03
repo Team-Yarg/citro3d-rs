@@ -21,7 +21,8 @@ pub mod texture;
 pub mod uniform;
 
 use std::fmt;
-use std::sync::OnceLock;
+use std::pin::Pin;
+use std::sync::{Arc, OnceLock};
 
 pub use error::{Error, Result};
 
@@ -39,6 +40,9 @@ pub mod macros {
 #[must_use]
 pub struct Instance {
     texenvs: [OnceLock<TexEnv>; texenv::TEXENV_COUNT],
+    /// The shader in use, we keep it at the rust level because the C API needs it to stay valid
+    /// (at a fixed address) once bound
+    shader: Option<Pin<Arc<shader::Program>>>,
 }
 
 impl fmt::Debug for Instance {
@@ -67,6 +71,7 @@ impl Instance {
         if unsafe { citro3d_sys::C3D_Init(size) } {
             Ok(Self {
                 texenvs: std::array::from_fn(|_| OnceLock::new()),
+                shader: None,
             })
         } else {
             Err(Error::FailedToInitialize)
@@ -157,12 +162,13 @@ impl Instance {
     }
 
     /// Use the given [`shader::Program`] for subsequent draw calls.
-    pub fn bind_program(&mut self, program: &shader::Program) {
+    pub fn bind_program(&mut self, program: Pin<Arc<shader::Program>>) {
         // SAFETY: AFAICT C3D_BindProgram just copies pointers from the given program,
         // instead of mutating the pointee in any way that would cause UB
         unsafe {
             citro3d_sys::C3D_BindProgram(program.as_raw().cast_mut());
         }
+        self.shader.replace(program);
     }
 
     /// Bind a uniform to the given `index` in the vertex shader for the next draw call.
