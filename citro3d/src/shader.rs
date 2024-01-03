@@ -192,6 +192,20 @@ impl Library {
             None
         }
     }
+    pub fn get_uniform(&self, name: &str) -> Option<uniform::Index> {
+        let dvle = unsafe { (*self.0.as_ptr()).DVLE.cast_const() };
+        assert!(!dvle.is_null(), "dvle should not be null");
+        let name = CString::new(name).ok()?;
+
+        // Safety: This only reads from it, but its a C api so its not const
+        let idx = unsafe { ctru_sys::DVLE_GetUniformRegister(dvle.cast_mut(), name.as_ptr()) };
+
+        if idx < 0 {
+            None
+        } else {
+            Some(idx.into())
+        }
+    }
 
     fn as_raw(&mut self) -> *mut ctru_sys::DVLB_s {
         self.0.as_ptr()
