@@ -186,6 +186,9 @@ impl TexParams {
 #[derive(Debug)]
 pub struct Tex(NonNull<citro3d_sys::C3D_Tex>);
 
+unsafe impl Send for Tex {}
+unsafe impl Sync for Tex {}
+
 impl Tex {
     /// Create a new texture with parameters
     ///
