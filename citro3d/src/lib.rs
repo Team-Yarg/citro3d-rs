@@ -25,6 +25,7 @@ use std::pin::Pin;
 use std::sync::{Arc, OnceLock};
 
 pub use error::{Error, Result};
+use static_assertions::assert_impl_all;
 
 use self::texenv::TexEnv;
 use self::uniform::Uniform;
@@ -237,3 +238,5 @@ impl Drop for Instance {
         }
     }
 }
+
+assert_impl_all!(Instance: Send, Sync);

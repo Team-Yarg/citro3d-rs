@@ -25,7 +25,12 @@ use crate::uniform;
 #[derive(Clone)]
 pub struct Program {
     program: ctru_sys::shaderProgram_s,
+    /// needs to be pin'd to work properly with C3D_Context BindProgram
+    _p: PhantomPinned,
 }
+
+unsafe impl Send for Program {}
+unsafe impl Sync for Program {}
 
 impl Program {
     /// Create a new shader program from a vertex shader.
@@ -50,7 +55,10 @@ impl Program {
         let ret = unsafe { ctru_sys::shaderProgramSetVsh(&mut program, vertex_shader.as_raw()) };
 
         if ret == 0 {
-            Ok(Self { program })
+            Ok(Self {
+                program,
+                _p: PhantomPinned,
+            })
         } else {
             Err(ctru::Error::from(ret))
         }
@@ -109,6 +117,9 @@ impl Program {
         &self.program
     }
 }
+
+static_assertions::assert_impl_all!(Program: Send, Sync);
+static_assertions::assert_not_impl_any!(Program: Unpin);
 
 impl Drop for Program {
     #[doc(alias = "shaderProgramFree")]
@@ -237,8 +248,4 @@ impl<'lib> Entrypoint<'lib> {
     fn as_raw(self) -> *mut ctru_sys::DVLE_s {
         self.ptr
     }
-}
-fn thingy() {
-    fn t<T: Unpin>() {}
-    t::<ctru_sys::shaderProgram_s>();
 }
