@@ -6,8 +6,11 @@
 
 use std::error::Error;
 use std::ffi::CString;
+use std::marker::PhantomPinned;
 use std::mem::MaybeUninit;
+use std::pin::Pin;
 use std::ptr::NonNull;
+use std::sync::Arc;
 
 use crate::uniform;
 
@@ -19,9 +22,15 @@ use crate::uniform;
 /// The PICA200 does not support user-programmable fragment shaders.
 #[doc(alias = "shaderProgram_s")]
 #[must_use]
+#[derive(Clone)]
 pub struct Program {
     program: ctru_sys::shaderProgram_s,
+    /// needs to be pin'd to work properly with C3D_Context BindProgram
+    _p: PhantomPinned,
 }
+
+unsafe impl Send for Program {}
+unsafe impl Sync for Program {}
 
 impl Program {
     /// Create a new shader program from a vertex shader.
@@ -46,7 +55,10 @@ impl Program {
         let ret = unsafe { ctru_sys::shaderProgramSetVsh(&mut program, vertex_shader.as_raw()) };
 
         if ret == 0 {
-            Ok(Self { program })
+            Ok(Self {
+                program,
+                _p: PhantomPinned,
+            })
         } else {
             Err(ctru::Error::from(ret))
         }
@@ -83,7 +95,7 @@ impl Program {
     /// * If a uniform with the given `name` could not be found
     #[doc(alias = "shaderInstanceGetUniformLocation")]
     pub fn get_uniform(&self, name: &str) -> crate::Result<uniform::Index> {
-        let vertex_instance = unsafe { (*self.as_raw()).vertexShader };
+        let vertex_instance = self.program.vertexShader;
         assert!(
             !vertex_instance.is_null(),
             "vertex shader should never be null!"
@@ -101,16 +113,19 @@ impl Program {
         }
     }
 
-    pub(crate) fn as_raw(&self) -> *const ctru_sys::shaderProgram_s {
+    pub(crate) fn as_raw(self: &Pin<Arc<Self>>) -> *const ctru_sys::shaderProgram_s {
         &self.program
     }
 }
+
+static_assertions::assert_impl_all!(Program: Send, Sync);
+static_assertions::assert_not_impl_any!(Program: Unpin);
 
 impl Drop for Program {
     #[doc(alias = "shaderProgramFree")]
     fn drop(&mut self) {
         unsafe {
-            let _ = ctru_sys::shaderProgramFree(self.as_raw().cast_mut());
+            let _ = ctru_sys::shaderProgramFree(&mut self.program);
         }
     }
 }
