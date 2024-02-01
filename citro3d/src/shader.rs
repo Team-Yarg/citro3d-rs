@@ -219,7 +219,7 @@ impl Library {
         if idx < 0 {
             None
         } else {
-            Some(idx.into())
+            Some((idx as u8).into())
         }
     }
 
