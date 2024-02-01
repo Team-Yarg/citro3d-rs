@@ -109,7 +109,7 @@ impl Program {
         if idx < 0 {
             Err(crate::Error::NotFound)
         } else {
-            Ok(idx.into())
+            Ok((idx as u8).into())
         }
     }
 
@@ -132,6 +132,7 @@ impl Drop for Program {
 
 /// The type of a shader.
 #[repr(u32)]
+#[derive(Clone, Copy)]
 pub enum Type {
     /// A vertex shader.
     Vertex = ctru_sys::GPU_VERTEX_SHADER,
