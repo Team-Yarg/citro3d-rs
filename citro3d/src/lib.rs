@@ -20,6 +20,8 @@
 pub mod attrib;
 pub mod buffer;
 pub mod error;
+pub mod light;
+pub mod material;
 pub mod math;
 pub mod render;
 pub mod shader;
@@ -53,6 +55,7 @@ pub struct Instance {
     /// The shader in use, we keep it at the rust level because the C API needs it to stay valid
     /// (at a fixed address) once bound
     shader: Option<Pin<Arc<shader::Program>>>,
+    light_env: Pin<Box<light::LightEnv>>,
 }
 
 impl fmt::Debug for Instance {
@@ -79,9 +82,16 @@ impl Instance {
     #[doc(alias = "C3D_Init")]
     pub fn with_cmdbuf_size(size: usize) -> Result<Self> {
         if unsafe { citro3d_sys::C3D_Init(size) } {
+            let mut light_env = Pin::new(Box::new(light::LightEnv::new()));
+            unsafe {
+                // setup the light env slot, since this is a pointer copy it will stick around even with we swap
+                // out light_env later
+                citro3d_sys::C3D_LightEnvBind(light_env.as_raw_mut() as *mut _);
+            }
             Ok(Self {
                 texenvs: std::array::from_fn(|_| OnceLock::new()),
                 shader: None,
+                light_env,
             })
         } else {
             Err(Error::FailedToInitialize)
@@ -216,6 +226,9 @@ impl Instance {
             citro3d_sys::C3D_BindProgram(program.as_raw().cast_mut());
         }
         self.shader.replace(program);
+    }
+    pub fn light_env_mut(&mut self) -> &mut light::LightEnv {
+        &mut self.light_env
     }
 
     /// Bind a uniform to the given `index` in the vertex shader for the next draw call.
