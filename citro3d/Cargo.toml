@@ -18,6 +18,7 @@ document-features = "0.2.7"
 libc = "0.2.125"
 static_assertions = "1.1.0"
 thiserror = "1.0.56"
+pin_array = { version = "0.1.0" }
 
 [features]
 default = ["glam"]
