@@ -1,4 +1,6 @@
 #![feature(allocator_api)]
+use std::sync::Arc;
+
 use citro3d::{
     attrib, buffer,
     light::{LightEnv, LightLutId, LutData, LutInput},
@@ -151,8 +153,8 @@ fn main() {
     let shader = shader::Library::from_bytes(SHADER_BYTES).unwrap();
     let vertex_shader = shader.get(0).unwrap();
 
-    let program = shader::Program::new(vertex_shader).unwrap();
-    instance.bind_program(&program);
+    let program = Arc::pin(shader::Program::new(vertex_shader).unwrap());
+    instance.bind_program(program.clone());
 
     let mut vbo_data = Vec::with_capacity_in(VERTICES.len(), ctru::linear::LinearAllocator);
     vbo_data.extend_from_slice(VERTICES);
