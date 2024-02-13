@@ -236,6 +236,9 @@ impl LightEnv {
             citro3d_sys::C3D_LightEnvLut(raw, id as u32, input as u32, false, lut);
         }
     }
+    pub fn set_fresnel(mut self: Pin<&mut Self>, sel: FresnelSelector) {
+        unsafe { citro3d_sys::C3D_LightEnvFresnel(self.as_raw_mut(), sel as _) }
+    }
 
     pub fn as_raw(&self) -> &citro3d_sys::C3D_LightEnv {
         &self.raw
