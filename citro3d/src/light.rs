@@ -261,12 +261,66 @@ unsafe impl Sync for LightEnv {}
 #[repr(transparent)]
 pub struct LutData(citro3d_sys::C3D_LightLut);
 
+impl PartialEq for LutData {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.data == other.0.data
+    }
+}
+impl Eq for LutData {}
+
+impl std::hash::Hash for LutData {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.0.data.hash(state);
+    }
+}
+
+#[cfg(test)]
 extern "C" fn c_powf(a: f32, b: f32) -> f32 {
     a.powf(b)
 }
 
+type LutArray = [u32; 256];
+
 impl LutData {
-    pub fn phong(shininess: f32) -> Self {
+    pub fn from_fn(mut f: impl FnMut(f32) -> f32, negative: bool) -> Self {
+        const LUT_BUF_SZ: usize = 512;
+        let base: i32 = 128;
+        let diff = if negative { 0 } else { base };
+        let min = -128 + diff;
+        let max = base + diff;
+        assert_eq!(min.abs_diff(max), 2 * base as u32);
+        let mut data = [0.0f32; LUT_BUF_SZ];
+        for i in min..=max {
+            let x = i as f32 / max as f32;
+            let v = f(x);
+            let idx = if negative { i & 0xFF } else { i } as usize;
+            if i < max {
+                data[idx] = v;
+            }
+            if i > min {
+                data[idx + 255] = v - data[idx - 1];
+            }
+        }
+        let lut = unsafe {
+            let mut lut = MaybeUninit::zeroed();
+            citro3d_sys::LightLut_FromArray(lut.as_mut_ptr(), data.as_mut_ptr());
+            lut.assume_init()
+        };
+        Self(lut)
+    }
+
+    /// Get a reference to the underlying data
+    pub fn data(&self) -> &LutArray {
+        &self.0.data
+    }
+
+    /// Get a mutable reference to the underlying data
+    pub fn data_mut(&mut self) -> &mut LutArray {
+        &mut self.0.data
+    }
+
+    #[cfg(test)]
+    fn phong_citro3d(shininess: f32) -> Self {
         let lut = unsafe {
             let mut lut = MaybeUninit::uninit();
             citro3d_sys::LightLut_FromFunc(lut.as_mut_ptr(), Some(c_powf), shininess, false);
@@ -276,6 +330,8 @@ impl LutData {
     }
 }
 
+/// This is used to decide what the input should be to a [`LutData`]
+#[derive(Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, Debug)]
 #[repr(u32)]
 pub enum LutInput {
     CosPhi = ctru_sys::GPU_LUTINPUT_CP,
@@ -291,7 +347,7 @@ pub enum LutInput {
     ViewHalf = ctru_sys::GPU_LUTINPUT_VH,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, Debug)]
 #[repr(u32)]
 pub enum LightLutId {
     D0 = ctru_sys::GPU_LUT_D0,
@@ -302,6 +358,18 @@ pub enum LightLutId {
     ReflectGreen = ctru_sys::GPU_LUT_RG,
     ReflectRed = ctru_sys::GPU_LUT_RR,
     DistanceAttenuation = ctru_sys::GPU_LUT_DA,
+}
+#[derive(Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[repr(u32)]
+pub enum FresnelSelector {
+    /// No fresnel selection
+    None = ctru_sys::GPU_NO_FRESNEL,
+    /// Use as selector for primary colour unit alpha
+    PrimaryAlpha = ctru_sys::GPU_PRI_ALPHA_FRESNEL,
+    /// Use as selector for secondary colour unit alpha
+    SecondaryAlpha = ctru_sys::GPU_SEC_ALPHA_FRESNEL,
+    /// Use as selector for both colour units
+    Both = ctru_sys::GPU_PRI_SEC_ALPHA_FRESNEL,
 }
 
 type LightArray = PinArray<Option<Light>, NB_LIGHTS>;
