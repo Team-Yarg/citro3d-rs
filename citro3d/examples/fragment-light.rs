@@ -3,13 +3,7 @@ use std::sync::Arc;
 
 use citro3d::{
     attrib, buffer,
-<<<<<<< HEAD
-    light::{LightEnv, LightLutId, LutData, LutInput},
-||||||| parent of d7ea67f (chore: LutData -> LightLut)
-    light::{FresnelSelector, LightEnv, LightLutId, LutData, LutInput},
-=======
     light::{FresnelSelector, LightEnv, LightLut, LightLutId, LutInput},
->>>>>>> d7ea67f (chore: LutData -> LightLut)
     material::{Color, Material},
     math::{AspectRatio, ClipPlanes, FVec3, FVec4, Matrix4, Projection, StereoDisplacement},
     render::{self, ClearFlags},

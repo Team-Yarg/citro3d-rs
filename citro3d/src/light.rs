@@ -1,6 +1,42 @@
 //! Bindings for accessing the lighting part of the GPU pipeline
 //!
-//! What does anything in this module mean? inspect this diagram: https://raw.githubusercontent.com/wwylele/misc-3ds-diagram/master/pica-pipeline.svg
+//! The hardware at play is shown in [this diagram][hardware], you should probably have
+//! it open as a reference for the documentation in this module.
+//!
+//! # Hardware lights
+//! There are 8 lights in the GPU's pipeline each of which have 4 colour fields and 1 spotlight colour,
+//! you can set all of them at once with [`LightEnv::set_material`]. When rendering for example you call
+//! `set_material` in your preparation code before the actual draw call.
+//!
+//! For things like specular lighting we need to go a bit deeper
+//!
+//! # LUTS
+//! LUTS are lookup tables, in this case for the GPU. They are created ahead of time and stored in [`LightLut`]'s,
+//! [`LightLut::from_fn`] essentially memoises the given function with the input changing depending on what
+//! input it is bound to when setting it on the [`LightEnv`].
+//!
+//! ## Example
+//! Lets say we have this code
+//!
+//! ```
+//! # use citro3d::{Instance, light::{LightLutId, LightInput, LightLut}};
+//! let mut inst = Instance::new();
+//! let mut env = inst.light_env_mut();
+//! env.as_mut().connect_lut(
+//!     LutInputId::D0,
+//!     LutInput::NormalView,
+//!     LightLut::from_fn(|x| x.powf(10.0)),
+//! );
+//! ```
+//!
+//! This places the LUT in `D0` (refer to [the diagram][hardware]) and connects the input wire as the dot product
+//! of the normal and view vectors. `x` is effectively the dot product of the normal and view for every vertex and
+//! the return of the closure goes out on the corresponding wire
+//! (which in the case of `D0` is used for specular lighting after being combined with with specular0)
+//!
+//!
+//!
+//! [hardware]: https://raw.githubusercontent.com/wwylele/misc-3ds-diagram/master/pica-pipeline.svg
 
 use std::{marker::PhantomPinned, mem::MaybeUninit, pin::Pin};
 
@@ -258,6 +294,9 @@ unsafe impl Sync for Light {}
 unsafe impl Send for LightEnv {}
 unsafe impl Sync for LightEnv {}
 
+/// Lookup table for light data
+///
+/// For more refer to the module documentation
 #[derive(Clone, Copy, Debug)]
 #[repr(transparent)]
 pub struct LightLut(citro3d_sys::C3D_LightLut);
@@ -283,6 +322,7 @@ extern "C" fn c_powf(a: f32, b: f32) -> f32 {
 type LutArray = [u32; 256];
 
 impl LightLut {
+    /// Create a LUT by memoizing a function
     pub fn from_fn(mut f: impl FnMut(f32) -> f32, negative: bool) -> Self {
         const LUT_BUF_SZ: usize = 512;
         let base: i32 = 128;
@@ -331,7 +371,7 @@ impl LightLut {
     }
 }
 
-/// This is used to decide what the input should be to a [`LutData`]
+/// This is used to decide what the input should be to a [`LightLut`]
 #[derive(Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, Debug)]
 #[repr(u32)]
 pub enum LutInput {
