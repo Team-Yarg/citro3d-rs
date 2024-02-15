@@ -113,8 +113,38 @@ impl Info {
         'this: 'idx,
         'vbo: 'idx,
     {
-        let stride = std::mem::size_of::<T>().try_into()?;
+        unsafe {
+            self.add_bytes(
+                std::slice::from_raw_parts(
+                    vbo_data.as_ptr().cast(),
+                    std::mem::size_of_val(vbo_data),
+                ),
+                attrib_info,
+                std::mem::size_of::<T>() as u32,
+            )
+        }
+    }
 
+    /// Add vbo bytes directly
+    ///
+    /// This is the same as [`Info::add`] except it requires manually specifying the
+    /// stride for each set of attributes, this is useful if you don't know the size
+    /// at compile time
+    ///
+    /// # Safety
+    /// `vbo_data` must have data matching `attrib_info` every `stride` bytes or strangeness
+    /// will occur
+    #[doc(alias = "BufInfo_Add")]
+    pub unsafe fn add_bytes<'this, 'vbo, 'idx>(
+        &'this mut self,
+        vbo_data: &'vbo [u8],
+        attrib_info: &attrib::Info,
+        stride: u32,
+    ) -> crate::Result<Slice<'idx>>
+    where
+        'this: 'idx,
+        'vbo: 'idx,
+    {
         // SAFETY: the lifetime of the VBO data is encapsulated in the return value's
         // 'vbo lifetime, and the pointer to &mut self.0 is used to access values
         // in the BufInfo, not copied to be used later.
@@ -122,7 +152,7 @@ impl Info {
             citro3d_sys::BufInfo_Add(
                 &mut self.0,
                 vbo_data.as_ptr().cast(),
-                stride,
+                stride as isize,
                 attrib_info.attr_count(),
                 attrib_info.permutation(),
             )
