@@ -3,7 +3,13 @@ use std::sync::Arc;
 
 use citro3d::{
     attrib, buffer,
+<<<<<<< HEAD
     light::{LightEnv, LightLutId, LutData, LutInput},
+||||||| parent of d7ea67f (chore: LutData -> LightLut)
+    light::{FresnelSelector, LightEnv, LightLutId, LutData, LutInput},
+=======
+    light::{FresnelSelector, LightEnv, LightLut, LightLutId, LutInput},
+>>>>>>> d7ea67f (chore: LutData -> LightLut)
     material::{Color, Material},
     math::{AspectRatio, ClipPlanes, FVec3, FVec4, Matrix4, Projection, StereoDisplacement},
     render::{self, ClearFlags},
@@ -301,9 +307,11 @@ fn main() {
     let mut buf_info = buffer::Info::new();
     let (attr_info, vbo_data) = prepare_vbos(&mut buf_info, &vbo_data);
     let mut light_env = instance.light_env_mut();
-    light_env
-        .as_mut()
-        .connect_lut(LightLutId::D0, LutInput::LightNormal, LutData::phong(30.0));
+    light_env.as_mut().connect_lut(
+        LightLutId::D0,
+        LutInput::LightNormal,
+        LightLut::from_fn(|v| v.powf(10.0), false),
+    );
     light_env.as_mut().set_material(Material {
         ambient: Some(Color::new(0.2, 0.2, 0.2)),
         diffuse: Some(Color::new(1.0, 0.4, 1.0)),
