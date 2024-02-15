@@ -9,7 +9,7 @@ use crate::attrib;
 
 /// Vertex buffer info. This struct is used to describe the shape of the buffer
 /// data to be sent to the GPU for rendering.
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 #[doc(alias = "C3D_BufInfo")]
 pub struct Info(pub(crate) citro3d_sys::C3D_BufInfo);
 

@@ -9,7 +9,7 @@ use std::mem::MaybeUninit;
 
 /// Vertex attribute info. This struct describes how vertex buffers are
 /// layed out and used (i.e. the shape of the vertex data).
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 #[doc(alias = "C3D_AttrInfo")]
 pub struct Info(pub(crate) citro3d_sys::C3D_AttrInfo);
 
