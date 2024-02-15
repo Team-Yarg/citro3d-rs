@@ -239,6 +239,12 @@ impl LightEnv {
     pub fn set_fresnel(mut self: Pin<&mut Self>, sel: FresnelSelector) {
         unsafe { citro3d_sys::C3D_LightEnvFresnel(self.as_raw_mut(), sel as _) }
     }
+    pub fn set_normal_map(mut self: Pin<&mut Self>, mode: BumpMode, unit_id: i32) {
+        unsafe {
+            citro3d_sys::C3D_LightEnvBumpMode(self.as_mut().as_raw_mut(), mode as _);
+            citro3d_sys::C3D_LightEnvBumpSel(self.as_mut().as_raw_mut(), unit_id);
+        }
+    }
 
     pub fn as_raw(&self) -> &citro3d_sys::C3D_LightEnv {
         &self.raw
@@ -454,6 +460,17 @@ pub enum FresnelSelector {
     SecondaryAlpha = ctru_sys::GPU_SEC_ALPHA_FRESNEL,
     /// Use as selector for both colour units
     Both = ctru_sys::GPU_PRI_SEC_ALPHA_FRESNEL,
+}
+
+#[derive(Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[repr(u32)]
+pub enum BumpMode {
+    /// No normal map.
+    None = ctru_sys::GPU_BUMP_NOT_USED,
+    /// Bump as bump mapping.
+    AsBump = ctru_sys::GPU_BUMP_AS_BUMP,
+    /// Bump as tangent/normal mapping.
+    AsTangent = ctru_sys::GPU_BUMP_AS_TANG,
 }
 
 type LightArray = PinArray<Option<Light>, NB_LIGHTS>;
