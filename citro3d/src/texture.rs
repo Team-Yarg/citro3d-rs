@@ -277,6 +277,28 @@ impl Tex {
             citro3d_sys::C3D_TexSetWrap(self.as_raw().cast_mut(), wrap_s as u32, wrap_t as u32)
         }
     }
+    // we are not a container it doesn't make sense to have is_empty
+    #[allow(clippy::len_without_is_empty)]
+    pub fn len(&self) -> usize {
+        self.width() as usize * self.height() as usize
+    }
+
+    fn data_ptr(&self) -> NonNull<u8> {
+        NonNull::new(unsafe { (*self.as_raw()).__bindgen_anon_1.data }.cast())
+            .expect("data pointer for texture cannot be null")
+    }
+
+    /// Get a reference to the underlying bytes
+    pub fn data(&self) -> &[u8] {
+        let ptr = self.data_ptr();
+        unsafe { core::slice::from_raw_parts(ptr.as_ref(), self.len()) }
+    }
+
+    /// Get a mutable reference to the underlying bytes
+    pub fn data_mut(&mut self) -> &mut [u8] {
+        let mut ptr = self.data_ptr();
+        unsafe { core::slice::from_raw_parts_mut(ptr.as_mut(), self.len()) }
+    }
 
     pub fn as_raw(&self) -> *const citro3d_sys::C3D_Tex {
         self.0.as_ptr() as *const _
