@@ -131,7 +131,7 @@ impl Drop for Program {
 }
 
 /// The type of a shader.
-#[repr(u32)]
+#[repr(u8)]
 #[derive(Clone, Copy)]
 pub enum Type {
     /// A vertex shader.
@@ -140,9 +140,9 @@ pub enum Type {
     Geometry = ctru_sys::GPU_GEOMETRY_SHADER,
 }
 
-impl From<Type> for u32 {
+impl From<Type> for u8 {
     fn from(value: Type) -> Self {
-        value as u32
+        value as u8
     }
 }
 
