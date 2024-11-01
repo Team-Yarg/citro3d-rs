@@ -4,7 +4,7 @@ use citro3d_sys::C3D_TexCube;
 
 #[doc(alias = "GPU_TEXTURE_MODE_PARAM")]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-#[repr(u32)]
+#[repr(u8)]
 pub enum TexKind {
     /// Standard 2D texture
     Tex2d = ctru_sys::GPU_TEX_2D,
@@ -34,7 +34,7 @@ impl From<ctru_sys::GPU_TEXTURE_MODE_PARAM> for TexKind {
 /// Format of the texture bytes
 #[doc(alias = "GPU_TEXCOLOR")]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-#[repr(u32)]
+#[repr(u8)]
 pub enum TexFormat {
     /// 8-bit Red + 8-bit Green + 8-bit Blue + 8-bit Alpha
     Rgba8 = ctru_sys::GPU_RGBA8,
@@ -109,7 +109,7 @@ impl TryFrom<ctru_sys::GPU_TEXCOLOR> for TexFormat {
 
 #[doc(alias = "GPU_TEXTURE_FILTER_PARAM")]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-#[repr(u32)]
+#[repr(u8)]
 pub enum TextureFilterParam {
     /// Nearest-neighbor interpolation.
     Nearest = ctru_sys::GPU_NEAREST,
@@ -119,7 +119,7 @@ pub enum TextureFilterParam {
 
 #[doc(alias = "GPU_TEXTURE_WRAP_PARAM")]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-#[repr(u32)]
+#[repr(u8)]
 pub enum TextureWrapParam {
     /// Clamps to edge.
     ClampToEdge = ctru_sys::GPU_CLAMP_TO_EDGE,
@@ -265,17 +265,15 @@ impl Tex {
         unsafe {
             citro3d_sys::C3D_TexSetFilter(
                 self.as_raw().cast_mut(),
-                mag_filter as u32,
-                min_filter as u32,
+                mag_filter as u8,
+                min_filter as u8,
             )
         }
     }
 
     #[doc(alias = "C3D_TexSetWrap")]
     pub fn set_wrap(&self, wrap_s: TextureWrapParam, wrap_t: TextureWrapParam) {
-        unsafe {
-            citro3d_sys::C3D_TexSetWrap(self.as_raw().cast_mut(), wrap_s as u32, wrap_t as u32)
-        }
+        unsafe { citro3d_sys::C3D_TexSetWrap(self.as_raw().cast_mut(), wrap_s as u8, wrap_t as u8) }
     }
     // we are not a container it doesn't make sense to have is_empty
     #[allow(clippy::len_without_is_empty)]

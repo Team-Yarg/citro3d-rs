@@ -209,8 +209,8 @@ impl LightEnv {
             unsafe {
                 citro3d_sys::C3D_LightEnvLut(
                     &mut me.raw,
-                    id as u32,
-                    input as u32,
+                    id as u8,
+                    input as u8,
                     false,
                     std::ptr::null_mut(),
                 );
@@ -233,7 +233,7 @@ impl LightEnv {
             (raw, lut)
         };
         unsafe {
-            citro3d_sys::C3D_LightEnvLut(raw, id as u32, input as u32, false, lut);
+            citro3d_sys::C3D_LightEnvLut(raw, id as u8, input as u8, false, lut);
         }
     }
     pub fn set_fresnel(mut self: Pin<&mut Self>, sel: FresnelSelector) {
@@ -422,7 +422,7 @@ impl LightLutDistAtten {
 
 /// This is used to decide what the input should be to a [`LightLut`]
 #[derive(Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, Debug)]
-#[repr(u32)]
+#[repr(u8)]
 pub enum LutInput {
     CosPhi = ctru_sys::GPU_LUTINPUT_CP,
     /// Light vector * normal
@@ -438,7 +438,7 @@ pub enum LutInput {
 }
 
 #[derive(Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, Debug)]
-#[repr(u32)]
+#[repr(u8)]
 pub enum LightLutId {
     D0 = ctru_sys::GPU_LUT_D0,
     D1 = ctru_sys::GPU_LUT_D1,
@@ -450,7 +450,7 @@ pub enum LightLutId {
     DistanceAttenuation = ctru_sys::GPU_LUT_DA,
 }
 #[derive(Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, Debug)]
-#[repr(u32)]
+#[repr(u8)]
 pub enum FresnelSelector {
     /// No fresnel selection
     None = ctru_sys::GPU_NO_FRESNEL,
@@ -463,7 +463,7 @@ pub enum FresnelSelector {
 }
 
 #[derive(Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, Debug)]
-#[repr(u32)]
+#[repr(u8)]
 pub enum BumpMode {
     /// No normal map.
     None = ctru_sys::GPU_BUMP_NOT_USED,
